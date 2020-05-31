@@ -23,7 +23,7 @@ typedef struct trie_t
 }trie;
 
 //each trie is indexed by word length
-trie * word_db[WN] = { 0 } ;
+trie * word_db[WN] ;
 
 trie * new_trie(char val)
 {
@@ -36,13 +36,15 @@ void free_trie(trie * t)
 {
 	if(t)
 	{
+		free_trie(t->child);
+		t->child = 0;
 		trie* s = t->sibling;
+		t->sibling = 0;
 		while(s)
 		{
 			free_trie(s);
 			s = s->sibling;
 		}
-		free(t->child);
 		free(t);
 	}
 }
@@ -82,7 +84,7 @@ void add_word(char * word, int len)
 int make_word_db()
 {
 	for(int i = 0; i < WN; i++)
-		word_db[i] = 0;
+	memset(word_db, 0, WN*sizeof(trie));
 	FILE * f = fopen(INPUT, "r");
 	int len;
 	char buf[WN] ;
@@ -98,34 +100,45 @@ int make_word_db()
 	}
 	return 0;
 }
-int check_word_db(char * word)
+
+//visit all children after prefix
+trie * get_child(trie * t, char * prefix)
 {
 	int i = 0;
-	int len = strlen(word);
-
-	trie * t = word_db[len];	
+	const int len = strlen(prefix);
 	while(++i < len)
 	{
-		//find or create
-		while(t && t->val != word[i])
+		while(t && t->val != prefix[i])
 		{
 			t = t->sibling;
 		}
 		if(t == 0)
 		{
-			printf("Could not find %s", word);
 			return 0 ;
 		}
 		else
 			t = t->child;		
 	}
-	return 1;
+	//
+	return t;
 }
 //build all word squares
-void print_word_dbquares(char * word)
+void print_sators(trie * t, char * word)
 {
+	int i = 0;
+	const int len = strlen(word);
+	char * prefix = malloc(len+1);
+	while(i < len)
+	{
+		memcpy(prefix, word, i);
+		trie * c = get_child(t, prefix);
+		//using this child, create word iterator 
+		i++;
+	}
 
+	free(prefix);
 }
+
 
 int main()
 {
@@ -142,16 +155,29 @@ int main()
 	char buf[WN] ;
 	while(printf(">") && fgets(buf,WN, stdin) )
 	{
-		int success = check_word_db(buf);
+		int len = strlen(buf);
+		if(buf[len-1]=='\n')
+		{
+			buf[len-1] = '\0';	
+			len--;
+		}
+		
+		trie * t = word_db[len]; 
+		int success = get_child(t, buf) == 0;
 		if(success)
-			print_word_dbquares(buf);
+		{
+			printf("Building Sator for %s...\n", buf);
+			print_sators(t, buf);
+		}
 		else
 			printf("Invalid word [%s], please try again\n", buf);
-
 	}
 	
 	for(int i = 0; i < WN; i++)
-		free_trie(word_db[i]);	
+	{
+		free_trie(word_db[i]);
+		word_db[i] = 0;	
+	}
 	printf("Goodbye!\n");
 
 }

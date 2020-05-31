@@ -1,3 +1,3 @@
 #!/bin/sh
-
- valgrind --leak-check=yes ./sator
+make 
+ valgrind --leak-check=yes  --leak-check=full --show-leak-kinds=all  ./sator
