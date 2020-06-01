@@ -17,7 +17,6 @@ int main()
 	char buf[sz] ;
 
 	FILE * out = fopen("words.txt", "w");
-
 	FILE * f = fopen("/usr/share/dict/words", "r");
   	assert(f);
 next:
@@ -28,9 +27,8 @@ next:
 			buf[len-1] = '\0';
 			len--;
 		} 
-		printf(">%s", buf);
 
-		if(len > 2)
+		if(len >= 2)
 		{
 			int i = -1;
 			while(++i < len)
@@ -44,7 +42,6 @@ next:
 				fputc('\n', out);
 				if(len > n)
 				{
-					//ignore
 					n = len;
 					strcpy(w, buf);
 				}
