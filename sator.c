@@ -13,10 +13,18 @@
 typedef struct trie_t
 {
 	char val; 
+	int depth; //also length of word
 	struct trie_t * parent; 
 	struct trie_t * children[CN]; 
+	//add weights ? 
 	int term;//terminates word
 }trie;
+
+#define trie_foreach_child(t, c)\
+	trie * c;\
+	for(int ix =0; ix<26; c = t->children[ix++])\
+		if(c)
+
 
 trie * trie_new(trie * p, char val)
 {
@@ -30,8 +38,8 @@ void trie_free(trie * t)
 {
 	if(t)
 	{
-		for(int i = 0; i < CN; i++)
-			trie_free(t->children[i]);
+		trie_foreach_child(t, c)
+			trie_free(c);
 		free(t);
 	}
 }
@@ -48,22 +56,24 @@ void trie_add(trie * t, char * word)
 		if(t->children[idx] == 0)
 			t->children[idx] = trie_new(par, word[i]);
 		t = t->children[idx];
-		if(++i == len)
-			t->term = 1;
+		t->depth = i;
+		i++;
 	}
+	t->term = 1;
+
 }
 trie * trie_find(trie * t, char * prefix)
 {
+	trie * c;
 	int i = 0;
 	int len = strlen(prefix);
-	while(i < len)
+	while(t && i < len)
 	{
-		if(!(t = t->children[prefix[i++] - 'a']))
-			return 0;
+		if(!(c = t->children[prefix[i++] - 'a']))
+			return t;
+		t=c;
 	}
-	if(t && t->term)
-		return t;
-	return 0;
+	return t;
 }
 // -------------------------------------- End Trie ----------------------------
 
@@ -91,18 +101,48 @@ int make_word_db()
 	return f ? !fclose(f) : 0;
 }
 
+//print backwards from leaf
+void print_word_upwards(trie * t)
+{
+
+	if(!t->term)return;
+	int d = t->depth;
+	printf("Depth %d", d);
+	char* word = malloc(d+1);
+	memset(word,0, d);
+	d--;
+	while(t)
+	{
+		word[d--] = t->val;
+		t = t->parent;
+	}
+	printf("%s\n", word);
+	free(word);
+}
+
+//print all suffixes at a given node
+void print_suffixes(trie * t)
+{
+	//
+	if(!t) return;
+	printf("%c", t->val);
+	getchar();
+	//print_word_upwards(t);
+	trie_foreach_child(t, c)
+		print_suffixes(c);
+}
+
 //build all word squares
 void print_sators(trie * t, char * word)
 {
-	return;
 	int i = 0;
 	int len = strlen(word);
 	char * prefix = malloc(len+1);
 	while(i <= len)
 	{
-		memcpy(prefix, word, i);
-		trie * c = trie_find(t, prefix);
-		//using this child, get all possible words. 
+		memcpy(prefix, word, i+1);
+		trie * f = trie_find(t, prefix);
+		print_suffixes(f);
 		i++;
 	}
 
@@ -133,12 +173,20 @@ int main()
 	char * word;
 	while(printf(">") && fgets(buf,WN, stdin)&& (word = strtok(buf, "\n")))
 	{
-		trie * t = word_db[strlen(word)]; 		
-		if((trie_find(t, word) != 0)) 
-			// print_sators(t, word);
+		trie * t = word_db[strlen(word)]; 
+
+		if( (t = trie_find(t, word)) && t->term)
 			printf("Found [%s]\n", word);
 		else
-			printf("Invalid word [%s], please try again\n", word);
+			printf("Invalid word [%s]\n", word);
+		//debug, for all length words
+		for(int i = 0 ; i < WN; i++)
+		{
+			trie * f = trie_find(word_db[i], word);
+			print_suffixes(f);
+		}
+
+		//print_sators(t, word);
 	}
 	
 	for(int i = 0; i < WN; i++)
@@ -147,5 +195,4 @@ int main()
 		word_db[i] = 0;	
 	}
 	printf("Goodbye!\n");
-
 }
