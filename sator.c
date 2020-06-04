@@ -20,10 +20,10 @@ typedef struct trie_t
 	int term;//terminates word
 }trie;
 
-#define trie_foreach_child(t, c)\
-	trie * c;\
-	for(int ix =0; ix<26; c = t->children[ix++])\
-		if(c)
+#define trie_foreach_child(t_, c_)\
+	trie * c_;\
+	for(int ix =0; ix<26; ix++)\
+		if((c_ = t_->children[ix]))
 
 
 trie * trie_new(trie * p, char val)
@@ -46,15 +46,13 @@ void trie_free(trie * t)
 void trie_add(trie * t, char * word)
 {
 	int len = strlen(word);
-	trie * par = 0;
 	int i = 0;
 	while(i < len)
 	{
-		par = t;
 		//find or create
 		int idx = word[i] - 'a';
 		if(t->children[idx] == 0)
-			t->children[idx] = trie_new(par, word[i]);
+			t->children[idx] = trie_new(t, word[i]);
 		t = t->children[idx];
 		t->depth = i;
 		i++;
@@ -102,34 +100,32 @@ int make_word_db()
 }
 
 //print backwards from leaf
-void print_word_upwards(trie * t)
+void print_word_upwards(trie * from)
 {
-
-	if(!t->term)return;
-	int d = t->depth;
-	printf("Depth %d", d);
-	char* word = malloc(d+1);
+	if(!from->term)return;
+	int d = from->depth+2;
+	char* word = malloc(d);
 	memset(word,0, d);
-	d--;
-	while(t)
+	word[--d] = '\0';
+	while(from && from->parent )
 	{
-		word[d--] = t->val;
-		t = t->parent;
+		word[--d] = from->val;
+		from = from->parent;
 	}
 	printf("%s\n", word);
 	free(word);
 }
 
 //print all suffixes at a given node
-void print_suffixes(trie * t)
+void print_suffixes(trie * from)
 {
 	//
-	if(!t) return;
-	printf("%c", t->val);
-	getchar();
-	//print_word_upwards(t);
-	trie_foreach_child(t, c)
+	if(!from) return;
+	print_word_upwards(from);
+	trie_foreach_child(from, c)
+	{
 		print_suffixes(c);
+	}
 }
 
 //build all word squares
@@ -171,19 +167,23 @@ int main()
 
 	char buf[WN];
 	char * word;
-	while(printf(">") && fgets(buf,WN, stdin)&& (word = strtok(buf, "\n")))
+	while(printf(">") && fgets(buf,WN, stdin) && (word = strtok(buf, "\n")))
 	{
-		trie * t = word_db[strlen(word)]; 
-
-		if( (t = trie_find(t, word)) && t->term)
-			printf("Found [%s]\n", word);
-		else
-			printf("Invalid word [%s]\n", word);
-		//debug, for all length words
-		for(int i = 0 ; i < WN; i++)
-		{
-			trie * f = trie_find(word_db[i], word);
-			print_suffixes(f);
+		const int len = strlen(word); 
+		trie * t = trie_find(word_db[len], word);
+		if(t && len)
+		{		
+			if(t->term)
+				printf("Found [%s]\n", word);
+			else
+				printf("Invalid word [%s]\n", word);
+			//debug, for all words greater than current length
+			for(int i = len; i < WN; i++)
+			{
+				trie * f = trie_find(word_db[i], word);
+				if(f && len-1 == f->depth)
+					print_suffixes(f);
+			}
 		}
 
 		//print_sators(t, word);
